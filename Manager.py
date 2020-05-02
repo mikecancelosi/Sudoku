@@ -34,7 +34,7 @@ class SudokuManager:
         while guessIndex != [-1, -1]:
             guessIndex = self.get_next_blank(guessIndex)
             self.GuessedIndices.append(guessIndex)
-            
+
     def get_next_blank(self, index):
         if index[1] < 8:
             index[1] += 1
