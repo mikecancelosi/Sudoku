@@ -15,53 +15,47 @@ class SudokuManager:
         [0, 0, 0, 0, 8, 0, 0, 7, 9]
     ]
 
-    GuessIndex = [0, 0]
+    GuessIndex = 0
     GuessedIndices = []
 
     def solve(self):
         print("Attempting to solve..")
         self.find_guessed_indices()
-        newindex = self.get_next_blank(self.GuessIndex)
-        print("new index is", newindex)
-        while self.GuessIndex is not [-1, -1]:
-            if self.guess(self.GuessIndex) is True:
-                self.GuessIndex = self.get_next_blank(self.GuessIndex)
+        while self.GuessIndex < len(self.GuessedIndices):
+            self.print_board()
+            if self.guess(self.GuessedIndices[self.GuessIndex]) is True:
+                self.GuessIndex += 1
             else:
-                self.GuessIndex = self.get_previous_blank(self.GuessIndex)
+                if self.GuessIndex > 1:
+                    self.GuessIndex -= 1
+                else:
+                    break
+
+
 
     def find_guessed_indices(self):
-        guessIndex = [0, 0]
+        guessIndex = [0, -1]
         while guessIndex != [-1, -1]:
             guessIndex = self.get_next_blank(guessIndex)
             self.GuessedIndices.append(guessIndex)
 
     def get_next_blank(self, index):
-        if index[1] < 8:
-            index[1] += 1
-        elif index[0] == 8:
-            return [-1, -1]
-        else:
-            index[0] += 1
-            index[1] = 0
-
         for x in range(index[0], 9):
             for y in range(0, 9):
-                if x > index[0] or (x == index[0] and y >= index[1]):
+                if x > index[0] or (x == index[0] and y >= (index[1] + 1)):
                     if self.board[x][y] is 0:
                         return [x, y]
+        return [-1, -1]
 
     def guess(self, index):
+        print("guessing @ ", index)
         initial_value = self.board[index[0]][index[1]]
         guess = initial_value
-        for i in range(guess, 9):
-            for x in range(0, 9):
-                if self.board[x][index[1]] == i:
-                    continue
-            for y in range(0, 9):
-                if self.board[index[0]][y] == i:
-                    continue
-            guess = i
-            break
+        for i in range(guess + 1, 9):
+            if not self.check_for_conflicts(index,i):
+                guess = i
+                break
+
         if guess != initial_value:
             self.board[index[0]][index[1]] = guess
             return True
@@ -69,19 +63,23 @@ class SudokuManager:
             self.board[index[0]][index[1]] = 0
             return False
 
-    def get_previous_blank(self, startIndex):
-        GuessedIndex = -1
-        for i in range(0, len(self.GuessedIndices)):
-            if self.GuessedIndices is startIndex:
-                GuessedIndex = i
+    def check_for_conflicts(self, index, guessValue):
+        for x in range(0, 9):
+            if self.board[x][index[1]] == guessValue:
+                return True
 
-        if GuessedIndex > 0:
-            return self.GuessedIndices[GuessedIndex - 1]
-        else:
-            print("somethin went wrong in getting previous blank")
+        for y in range(0, 9):
+            if self.board[index[0]][y] == guessValue:
+                return True
 
     def on_board_complete(self):
         print("Complete!", self.board)
+
+    def print_board(self):
+        print("", self.board[0],"\n",self.board[1],"\n",self.board[2],"\n",self.board[3],"\n",
+              self.board[4],"\n",self.board[5],"\n",
+              self.board[6],"\n",self.board[7],"\n",self.board[8],"\n")
+
 
 
 class Drawer:
