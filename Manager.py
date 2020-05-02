@@ -22,16 +22,15 @@ class SudokuManager:
         print("Attempting to solve..")
         self.find_guessed_indices()
         while self.GuessIndex < len(self.GuessedIndices):
-            self.print_board()
             if self.guess(self.GuessedIndices[self.GuessIndex]) is True:
                 self.GuessIndex += 1
             else:
-                if self.GuessIndex > 1:
+                if self.GuessIndex > 0:
                     self.GuessIndex -= 1
                 else:
+                    self.print_board()
                     break
-
-
+        self.on_board_complete()
 
     def find_guessed_indices(self):
         guessIndex = [0, -1]
@@ -48,10 +47,9 @@ class SudokuManager:
         return [-1, -1]
 
     def guess(self, index):
-        print("guessing @ ", index)
         initial_value = self.board[index[0]][index[1]]
         guess = initial_value
-        for i in range(guess + 1, 9):
+        for i in range(guess + 1, 10):
             if not self.check_for_conflicts(index,i):
                 guess = i
                 break
@@ -73,7 +71,8 @@ class SudokuManager:
                 return True
 
     def on_board_complete(self):
-        print("Complete!", self.board)
+        print("Complete! \n")
+        self.print_board()
 
     def print_board(self):
         print("", self.board[0],"\n",self.board[1],"\n",self.board[2],"\n",self.board[3],"\n",
