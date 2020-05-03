@@ -1,8 +1,25 @@
 import pygame as gm
-import Solver as m
 
 gm.init()
 gm.font.init()
+
+
+class Event(object):
+
+    def __init__(self):
+        self.__eventhandlers = []
+
+    def __iadd__(self, handler):
+        self.__eventhandlers.append(handler)
+        return self
+
+    def __isub__(self, handler):
+        self.__eventhandlers.remove(handler)
+        return self
+
+    def __call__(self, *args, **keywargs):
+        for eventhandler in self.__eventhandlers:
+            eventhandler(*args, **keywargs)
 
 
 class SudokuSolver:
@@ -11,17 +28,21 @@ class SudokuSolver:
     GuessIndex = 0
     GuessedIndices = []
 
-    def __init__(self,board):
+    def __init__(self, board):
         self.Board = board
+        self.find_guessed_indices()
+        self.OnGuessMade = Event()
+        self.OnGuessRemoved = Event()
 
     def solve(self):
-        self.find_guessed_indices()
         while self.GuessIndex < len(self.GuessedIndices):
             index = self.GuessedIndices[self.GuessIndex]
             if self.guess(index) is True:
+                self.OnGuessMade(index, self.Board[index[0]][index[1]])
                 self.GuessIndex += 1
             else:
                 if self.GuessIndex > 0:
+                    self.OnGuessRemoved(index)
                     self.GuessIndex -= 1
                 else:
                     self.print_board()
@@ -67,13 +88,13 @@ class SudokuSolver:
                 return True
 
     def on_board_complete(self):
-        print("Complete! \n")
-        self.print_board()
+        self.IsSolved = True
 
     def print_board(self):
         print("", self.Board[0], "\n", self.Board[1], "\n", self.Board[2], "\n", self.Board[3], "\n",
               self.Board[4], "\n", self.Board[5], "\n",
               self.Board[6], "\n", self.Board[7], "\n", self.Board[8], "\n")
+
 
 class Button:
     Rect = []
@@ -106,7 +127,6 @@ class Drawer:
         [0, 0, 0, 0, 8, 0, 0, 7, 9]
     ]
 
-
     TextSize = 20
     Font = gm.font.SysFont('Arial', TextSize)
     BaseColor = (80, 80, 80)
@@ -128,8 +148,11 @@ class Drawer:
     windowSize_y = windowSize_x + ButtonSize_y + PaddingSize
 
     win = gm.display.set_mode((windowSize_x, windowSize_y))
+    Solver = SudokuSolver(Board)
 
     def __init__(self):
+        self.Solver.OnGuessMade += self.add_number
+        self.Solver.OnGuessRemoved += self.remove_number
         self.draw()
 
     def draw(self):
@@ -168,7 +191,7 @@ class Drawer:
         if solve_button.IsHovering(mouse):
             gm.draw.rect(self.win, solve_button.HoverColor, solve_button.Rect)
             if click[0] == 1:
-                self.Manager.solve()
+                self.Solver.solve()
 
         else:
             gm.draw.rect(self.win, solve_button.BaseColor, solve_button.Rect)
@@ -192,5 +215,5 @@ class Drawer:
     def set_manager(self, manager):
         self.Manager = manager
 
-drawer = Drawer()
 
+drawer = Drawer()
