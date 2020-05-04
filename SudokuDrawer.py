@@ -31,10 +31,13 @@ class SudokuSolver:
     def __init__(self, board):
         self.Board = board
         self.find_guessed_indices()
+        print(self.GuessedIndices)
         self.OnGuessMade = Event()
         self.OnGuessRemoved = Event()
+        self.OnBoardComplete = Event()
 
     def solve(self):
+        print("whole solve")
         while self.GuessIndex < len(self.GuessedIndices):
             index = self.GuessedIndices[self.GuessIndex]
             if self.guess(index) is True:
@@ -49,18 +52,35 @@ class SudokuSolver:
                     break
         self.on_board_complete()
 
+    def solve_step(self):
+        if self.GuessIndex < len(self.GuessedIndices):
+            index = self.GuessedIndices[self.GuessIndex]
+            if self.guess(index) is True:
+                self.OnGuessMade(index, self.Board[index[0]][index[1]])
+                self.GuessIndex += 1
+            else:
+                if self.GuessIndex > 0:
+                    self.OnGuessRemoved(index)
+                    self.GuessIndex -= 1
+                else:
+                    self.print_board()
+        else:
+            self.on_board_complete()
+
     def find_guessed_indices(self):
-        guess_index = [0, -1]
+        guess_index = [0, 0]
         while guess_index != [-1, -1]:
             guess_index = self.get_next_blank(guess_index)
-            self.GuessedIndices.append(guess_index)
+            if guess_index != [-1, -1]:
+                self.GuessedIndices.append(guess_index)
 
     def get_next_blank(self, index):
-        for x in range(index[0], 9):
-            for y in range(0, 9):
-                if x > index[0] or (x == index[0] and y >= (index[1] + 1)):
+        for y in range(index[1], 9):     # we do y first so the order is from left to right
+            for x in range(0, 9): # rather than up/down
+                if x > index[0] or y >= (index[1] + 1):
                     if self.Board[x][y] is 0:
                         return [x, y]
+
         return [-1, -1]
 
     def guess(self, index):
@@ -88,7 +108,8 @@ class SudokuSolver:
                 return True
 
     def on_board_complete(self):
-        self.IsSolved = True
+        print("call on")
+        self.OnBoardComplete()
 
     def print_board(self):
         print("", self.Board[0], "\n", self.Board[1], "\n", self.Board[2], "\n", self.Board[3], "\n",
@@ -149,10 +170,13 @@ class Drawer:
 
     win = gm.display.set_mode((windowSize_x, windowSize_y))
     Solver = SudokuSolver(Board)
+    board_solved = False
+
 
     def __init__(self):
         self.Solver.OnGuessMade += self.add_number
         self.Solver.OnGuessRemoved += self.remove_number
+        self.Solver.OnBoardComplete += self.on_finished
         self.draw()
 
     def draw(self):
@@ -164,19 +188,22 @@ class Drawer:
                     run = False
 
             gm.display.update()
-            # draw base board
-            self.win.fill(self.BackgroundColor)
-            for x in range(0, 9):
-                for y in range(0, 9):
-                    pos = self.get_number_pos([x, y])
-                    gm.draw.rect(self.win, self.BoxColor, (pos[0], pos[1], self.BoxSize, self.BoxSize))
-                    if self.Board[x][y] != 0:
-                        text = self.Font.render(str(self.Board[x][y]), False, self.BaseColor)
-                        pos[0] += self.TextSize / 2
-                        pos[1] += self.TextSize / 4
-                        self.win.blit(text, (pos[0], pos[1]))
 
+            self.draw_base_board()
             self.draw_solve_button()
+
+    def draw_base_board(self):
+        # draw base board
+        self.win.fill(self.BackgroundColor)
+        for x in range(0, 9):
+            for y in range(0, 9):
+                pos = self.get_number_pos([x, y])
+                gm.draw.rect(self.win, self.BoxColor, (pos[0], pos[1], self.BoxSize, self.BoxSize))
+                if self.Board[x][y] != 0:
+                    text = self.Font.render(str(self.Board[x][y]), False, self.BaseColor)
+                    pos[0] += self.TextSize / 2
+                    pos[1] += self.TextSize / 4
+                    self.win.blit(text, (pos[0], pos[1]))
 
     def get_number_pos(self, coords):
         x_pos = (coords[0] * (self.BoxSize + self.PaddingSize)) + self.MarginSize
@@ -191,7 +218,7 @@ class Drawer:
         if solve_button.IsHovering(mouse):
             gm.draw.rect(self.win, solve_button.HoverColor, solve_button.Rect)
             if click[0] == 1:
-                self.Solver.solve()
+                self.on_solve_click()
 
         else:
             gm.draw.rect(self.win, solve_button.BaseColor, solve_button.Rect)
@@ -200,14 +227,21 @@ class Drawer:
         solve_text_pos_y = solve_button.Rect[1] + 3
         self.win.blit(solve_text, (solve_text_pos_x, solve_text_pos_y))
 
+    def on_solve_click(self):
+        while self.board_solved is False:
+            self.Solver.solve_step()
+            self.draw_base_board()
+
     def add_number(self, index, value):
         self.Board[index[0]][index[1]] = value
+        gm.display.update()
 
     def remove_number(self, index):
         self.Board[index[0]][index[1]] = 0
 
     def on_finished(self):
         print("Game is complete!")
+        self.board_solved = True
 
     def on_player_click(self, index):
         print("Player clicked on square ", index)
