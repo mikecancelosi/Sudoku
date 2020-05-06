@@ -279,7 +279,6 @@ class Drawer:
                         result = parse_number_input(key)
                         if result != -1:
                             if self.ActiveBox != [-1, -1]:
-                                print(result)
                                 self.UserSoftGuesses[self.ActiveBox[0]][self.ActiveBox[1]] = result
 
             self.Mouse = gm.mouse.get_pos()
