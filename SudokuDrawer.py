@@ -178,7 +178,7 @@ class Drawer:
         [0, 0, 0, 0, 8, 0, 0, 7, 9]
     ]
 
-    UserGuesses = [
+    Guesses = [
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -189,13 +189,41 @@ class Drawer:
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]
+
+    SolverGuesses = [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]
+
+    UserSoftGuesses = [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]
+
     TextSize = 20
     Font = gm.font.SysFont('Arial', TextSize)
 
     WindowBackgroundColor = (200, 200, 200)
-    GuessTextSize = 10
-    SolvedTextColor = (90, 90, 90)
+    BaseTextColor = (90, 90, 90)
+    GuessTextSize = 20
     GuessTextColor = (125, 125, 125)
+    SoftGuessTextSize = 14
+    SoftGuessTextColor = (100, 100, 100)
+    SoftGuessFont = gm.font.SysFont('Arial', SoftGuessTextSize)
     GuessBoxColor_Base = (80, 80, 80)
     GuessBoxColor_Hover = (90, 90, 90)
     GuessBoxColor_Active = (180, 180, 80)
@@ -237,14 +265,22 @@ class Drawer:
                 if event.type == gm.KEYDOWN:
                     key = gm.key.name(event.key)  # Returns string id of pressed key.
                     if key == "tab":
-                        nextPos = self.Solver.get_next_blank(self.ActiveBox)
-                        if nextPos != [-1, -1]:
-                            self.ActiveBox = nextPos
+                        next_pos = self.Solver.get_next_blank(self.ActiveBox)
+                        if next_pos != [-1, -1]:
+                            self.ActiveBox = next_pos
+                    elif key == "enter" or key == "return":
+                        x = self.ActiveBox[0]
+                        y = self.ActiveBox[1]
+                        if self.UserSoftGuesses[x][y]:
+                            value = self.UserSoftGuesses[x][y]
+                            self.UserSoftGuesses[x][y] = 0
+                            self.Guesses[x][y] = value
                     else:
                         result = parse_number_input(key)
                         if result != -1:
                             if self.ActiveBox != [-1, -1]:
-                                self.UserGuesses[self.ActiveBox[0]][self.ActiveBox[1]] = result
+                                print(result)
+                                self.UserSoftGuesses[self.ActiveBox[0]][self.ActiveBox[1]] = result
 
             self.Mouse = gm.mouse.get_pos()
             self.Click = gm.mouse.get_pressed()
@@ -259,39 +295,45 @@ class Drawer:
         self.win.fill(self.WindowBackgroundColor)
         for x in range(0, 9):
             for y in range(0, 9):
-                # find out if this is a guess number or an original.
-                guess = self.Solver.GuessedIndices.__contains__([x, y])
                 pos = self.get_number_pos([x, y])
                 box = Square((pos[0], pos[1], self.BoxSize, self.BoxSize), self.BoxColor, self.GuessBoxColor_Hover)
 
+                # find out where the value we are going to put is found.
+                guess = self.Guesses[x][y] != 0
+                user_guess_soft = self.UserSoftGuesses[x][y] != 0
+                base_board = self.Board[x][y] != 0
+
                 # Draw box background
-                if guess:
-                    if self.ActiveBox == [x, y]:
-                        gm.draw.rect(self.win, self.GuessBoxColor_Active, box.Rect)
-                    elif box.IsHovering(self.Mouse):
-                        if self.Click[0] == 1:
-                            self.ActiveBox = [x, y]
-                            gm.draw.rect(self.win, self.GuessBoxColor_Active, box.Rect)
-                        else:
-                            gm.draw.rect(self.win, box.HoverColor, box.Rect)
+                if self.ActiveBox == [x, y]:
+                    gm.draw.rect(self.win, self.GuessBoxColor_Active, box.Rect)
+                elif box.IsHovering(self.Mouse) and not base_board:
+                    if self.Click[0] == 1:
+                        self.ActiveBox = [x, y]
                     else:
-                        gm.draw.rect(self.win, box.BaseColor, box.Rect)
+                        gm.draw.rect(self.win, box.HoverColor, box.Rect)
                 else:
                     gm.draw.rect(self.win, box.BaseColor, box.Rect)
 
-                # Draw box text
-                if self.Solving is False and self.UserGuesses[x][y] != 0:
-                    text = self.Font.render(str(self.UserGuesses[x][y]), False, self.GuessTextColor)
-                    pos[0] += self.TextSize / 2
-                    pos[1] += self.TextSize / 4
+                # Draw box values
+                if guess:
+                    value = self.Guesses[x][y]
+                    text = self.Font.render(str(value), False, self.GuessTextColor)
+                    pos[0] += self.GuessTextSize / 2
+                    pos[1] += self.GuessTextSize / 4
                     self.win.blit(text, (pos[0], pos[1]))
-                elif self.Board[x][y] != 0:
-                    text = self.Font.render(str(self.Board[x][y]), False, self.SolvedTextColor)
-                    if guess:
-                        text = self.Font.render(str(self.Board[x][y]), False, self.GuessTextColor)
-                    pos[0] += self.TextSize / 2
-                    pos[1] += self.TextSize / 4
+                elif user_guess_soft:
+                    value = self.UserSoftGuesses[x][y]
+                    text = self.SoftGuessFont.render(str(value), False, self.SoftGuessTextColor)
+                    pos[0] += self.SoftGuessTextSize / 3
+                    pos[1] += self.SoftGuessTextSize / 5
                     self.win.blit(text, (pos[0], pos[1]))
+                else:
+                    value = str(self.Board[x][y])
+                    if value != "0":
+                        text = self.Font.render(value, False, self.BaseTextColor)
+                        pos[0] += self.TextSize / 2
+                        pos[1] += self.TextSize / 4
+                        self.win.blit(text, (pos[0], pos[1]))
 
     def get_number_pos(self, coords):
         x_pos = (coords[0] * (self.BoxSize + self.PaddingSize)) + self.MarginSize
@@ -351,7 +393,7 @@ class Drawer:
         for x in range(0, 9):
             for y in range(0, 9):
                 if board_cpy[x][y] == 0:
-                    guess = self.UserGuesses[x][y]
+                    guess = self.Guesses[x][y]
                     if guess == 0:
                         mistakes.append([x, y])
                     else:
