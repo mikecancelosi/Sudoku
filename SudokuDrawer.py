@@ -253,6 +253,7 @@ class Drawer:
     Solver = SudokuSolver(Board)
     board_solved = False
     Solving = False
+    board_solved_user = False
 
     keys = gm.key.get_pressed()
     Mouse = gm.mouse.get_pos()
@@ -261,6 +262,8 @@ class Drawer:
     event = gm.event.poll()
     LastNumberInput = 0
     start = time.time()
+    SolveStart = time.time()
+    SolveTime = "Not solved."
 
     def __init__(self):
         self.Solver.OnGuessMade += self.add_number
@@ -300,13 +303,19 @@ class Drawer:
 
             gm.display.update()
             self.draw_base_board()
-            self.draw_time()
+            if not self.board_solved_user and not self.board_solved:
+                self.draw_time()
             self.draw_solve_button()
             self.draw_check_solution_button()
+            if self.board_solved:
+                self.draw_solver_complete()
+            elif self.board_solved_user:
+                self.draw_user_complete()
 
     def draw_base_board(self):
         """Draw the boxes and number values"""
         self.win.fill(self.WindowBackgroundColor)
+        self.draw_guides()
         for x in range(0, 9):
             for y in range(0, 9):
                 pos = self.get_number_pos([x, y])
@@ -324,7 +333,7 @@ class Drawer:
                 if not self.Solving:
                     if self.ActiveBox == [x, y]:
                         gm.draw.rect(self.win, self.GuessBoxColor_Active, rect)
-                    elif is_hovering(self.Mouse,rect) and not base_board:
+                    elif is_hovering(self.Mouse, rect) and not base_board:
                         if self.Click[0] == 1:
                             self.ActiveBox = [x, y]
                             if mistake:
@@ -365,6 +374,24 @@ class Drawer:
         y_pos = (coords[1] * (self.BoxSize + self.PaddingSize)) + self.MarginSize
         return [x_pos, y_pos]
 
+    def draw_guides(self):
+        grid_color = (130, 130, 130)
+        line_width = 1
+        offset = (self.PaddingSize / 2) - (line_width / 2 )
+        size = (self.BoxSize * 9) + (self.PaddingSize * 8)
+        one = (self.BoxSize * 3) + (self.PaddingSize * 2) + self.MarginSize + offset
+        two = (self.BoxSize * 6) + (self.PaddingSize * 5) + self.MarginSize + offset
+
+        vert_one_rect = (one, self.MarginSize, line_width, size)
+        vert_two_rect = (two, self.MarginSize, line_width, size)
+        hor_one_rect = (self.MarginSize, one, size, line_width)
+        hor_two_rect = (self.MarginSize, two, size, line_width)
+
+        gm.draw.rect(self.win, grid_color, vert_one_rect)
+        gm.draw.rect(self.win, grid_color, vert_two_rect)
+        gm.draw.rect(self.win, grid_color, hor_one_rect)
+        gm.draw.rect(self.win, grid_color, hor_two_rect)
+
     def draw_solve_button(self):
         """Draw solve button in the bottom left"""
         button_color = (50, 150, 25)
@@ -388,13 +415,13 @@ class Drawer:
 
     def draw_time(self):
         """Draw time clock on bottom center"""
-        text = self.BaseFont.render(self.get_time_elapsed(), False, self.BaseTextColor)
+        text = self.BaseFont.render(self.get_time_elapsed(self.start), False, self.BaseTextColor)
         x = self.MarginSize + self.PaddingSize + 125
         y = (9 * (self.BoxSize + self.PaddingSize)) + self.MarginSize + 5
         self.win.blit(text, (x, y))
 
-    def get_time_elapsed(self):
-        x = time.time() - self.start
+    def get_time_elapsed(self, start_time):
+        x = time.time() - start_time
         time_elapsed = str(datetime.timedelta(seconds=x))[2:-7]
         return time_elapsed
 
@@ -421,6 +448,7 @@ class Drawer:
 
     def on_solve_click(self):
         """Use solver to solve the board if it isn't solved"""
+        self.SolveStart = time.time()
         while self.board_solved is False:
             self.Solver.solve_step()
             self.draw_base_board()
@@ -450,7 +478,7 @@ class Drawer:
             self.on_user_completes_board_inc(mistakes)
 
     def on_user_complete_board(self):
-        print("User finished the board!")
+        self.board_solved_user = True
 
     def on_user_completes_board_inc(self, mistakes):
         """Add mistakes to mistake array"""
@@ -468,9 +496,32 @@ class Drawer:
 
     def on_solver_complete_board(self):
         """Set solved to true. Display message"""
-        print("Solver finished the board in ", self.get_time_elapsed())
+        self.SolveTime = str(self.get_time_elapsed(self.SolveStart))
         self.board_solved = True
 
+    def draw_user_complete(self):
+        print("draw")
+
+    def draw_solver_complete(self):
+        window_background_color = (80, 80, 80)
+        size = (300, 300)
+        center = (self.windowSize_x / 2 - (size[0] / 2), (self.windowSize_y / 2) - (size[1] / 2))
+        rect = (center[0], center[1], size[0], size[1])
+        gm.draw.rect(self.win, window_background_color, rect)
+
+        heading_label = "Complete!"
+        heading_color = (40, 200, 100)
+        heading_text = self.BaseFont.render(heading_label, False, heading_color)
+        heading_text_pos_x = center[0] + 50
+        heading_text_pos_y = center[1] + 100
+        self.win.blit(heading_text, (heading_text_pos_x, heading_text_pos_y))
+
+        subheading_label = "The computer solved the board in " + self.get_time_elapsed(self.SolveStart) + "!"
+        subheading_color = (80, 160, 100)
+        subheading_text = self.BaseFont.render(subheading_label, False, subheading_color)
+        subheading_text_pos_x = center[0] + 30
+        subheading_text_pos_y = center[1] + 150
+        self.win.blit(subheading_text, (subheading_text_pos_x, subheading_text_pos_y))
 
 
 drawer = Drawer()
