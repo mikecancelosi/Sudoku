@@ -25,6 +25,7 @@ class Event(object):
 
 
 def check_board_for_conflicts(board):
+    """Return list of mistake indices found in given board"""
     mistakes = []
     for x in range(0, 9):
         for y in range(0, 9):
@@ -42,6 +43,7 @@ def check_board_for_conflicts(board):
 
 
 class SudokuSolver:
+    """Handles solving the sudoku board"""
     # numbers cant match in same row, or board[x+1][y]
     Board = []
     GuessIndex = 0
@@ -55,7 +57,7 @@ class SudokuSolver:
         self.OnBoardComplete = Event()
 
     def solve(self):
-        print("whole solve")
+        """Solve whole board and fire event on finish"""
         while self.GuessIndex < len(self.GuessedIndices):
             index = self.GuessedIndices[self.GuessIndex]
             if self.guess(index) is True:
@@ -71,6 +73,7 @@ class SudokuSolver:
         self.on_board_complete()
 
     def solve_step(self):
+        """Attempt next step of solution and fire result"""
         if self.GuessIndex < len(self.GuessedIndices):
             index = self.GuessedIndices[self.GuessIndex]
             if self.guess(index) is True:
@@ -86,6 +89,7 @@ class SudokuSolver:
             self.on_board_complete()
 
     def find_guessed_indices(self):
+        """Find all indices of the board where guesses need to be made"""
         guess_index = [0, 0]
         while guess_index != [-1, -1]:
             guess_index = self.get_next_blank(guess_index)
@@ -93,6 +97,7 @@ class SudokuSolver:
                 self.GuessedIndices.append(guess_index)
 
     def get_next_blank(self, index):
+        """Find next guess index needed"""
         for y in range(index[1], 9):  # we do y first so the order is from
             for x in range(0, 9):  # left to right rather than up/down
                 if x > index[0] or y >= (index[1] + 1):
@@ -102,6 +107,7 @@ class SudokuSolver:
         return [-1, -1]
 
     def guess(self, index):
+        """Guess value for given index"""
         initial_value = self.Board[index[0]][index[1]]
         guess = initial_value
         for i in range(guess + 1, 10):
@@ -117,6 +123,7 @@ class SudokuSolver:
             return False
 
     def check_for_conflicts(self, index, guess_value):
+        """Check if value conflicts with the rest of board"""
         for x in range(0, 9):
             if self.Board[x][index[1]] == guess_value:
                 return True
@@ -126,30 +133,14 @@ class SudokuSolver:
                 return True
 
     def on_board_complete(self):
+        """Fire on board complete event"""
         self.OnBoardComplete()
 
     def print_board(self):
+        """Print board to console"""
         print("", self.Board[0], "\n", self.Board[1], "\n", self.Board[2], "\n", self.Board[3], "\n",
               self.Board[4], "\n", self.Board[5], "\n",
               self.Board[6], "\n", self.Board[7], "\n", self.Board[8], "\n")
-
-
-class Square:
-    Rect = []
-    BaseColor = (130, 130, 130)
-    HoverColor = (170, 170, 170)
-
-    def __init__(self, rect, base_color, hover_color):
-        self.Rect = rect
-        self.BaseColor = base_color
-        self.HoverColor = hover_color
-
-    def IsHovering(self, mouse):
-        if self.Rect[0] < mouse[0] < self.Rect[0] + self.Rect[2] and self.Rect[1] < mouse[
-            1] < self.Rect[1] + self.Rect[3]:
-            return True
-        else:
-            return False
 
 
 def parse_number_input(input):
@@ -165,6 +156,14 @@ def parse_number_input(input):
             return -1
     else:
         return -1
+
+
+def is_hovering(mouse, rect):
+    if rect[0] < mouse[0] < rect[0] + rect[2] and rect[1] < mouse[
+        1] < rect[1] + rect[3]:
+        return True
+    else:
+        return False
 
 
 class Drawer:
@@ -228,11 +227,10 @@ class Drawer:
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]
 
-    TextSize = 20
-    Font = gm.font.SysFont('Arial', TextSize)
-
     WindowBackgroundColor = (200, 200, 200)
     BaseTextColor = (90, 90, 90)
+    BaseTextSize = 20
+    BaseFont = gm.font.SysFont('Arial', BaseTextSize)
     GuessTextSize = 20
     GuessTextColor = (125, 125, 125)
     SoftGuessTextSize = 14
@@ -267,10 +265,11 @@ class Drawer:
     def __init__(self):
         self.Solver.OnGuessMade += self.add_number
         self.Solver.OnGuessRemoved += self.remove_number
-        self.Solver.OnBoardComplete += self.on_finished
+        self.Solver.OnBoardComplete += self.on_solver_complete_board
         self.draw()
 
     def draw(self):
+        """Handle drawing"""
         run = True
         while run:
             gm.time.delay(100)
@@ -306,12 +305,14 @@ class Drawer:
             self.draw_check_solution_button()
 
     def draw_base_board(self):
-        # draw base board
+        """Draw the boxes and number values"""
         self.win.fill(self.WindowBackgroundColor)
         for x in range(0, 9):
             for y in range(0, 9):
                 pos = self.get_number_pos([x, y])
-                box = Square((pos[0], pos[1], self.BoxSize, self.BoxSize), self.BoxColor, self.GuessBoxColor_Hover)
+                rect = (pos[0], pos[1], self.BoxSize, self.BoxSize)
+                base_color = self.BoxColor
+                hover_color = self.GuessBoxColor_Hover
 
                 # find out where the value we are going to put is found.
                 guess = self.Guesses[x][y] != 0
@@ -320,23 +321,27 @@ class Drawer:
                 mistake = self.Mistakes[x][y] == 1
 
                 # Draw box background
-
-                if self.ActiveBox == [x, y]:
-                    gm.draw.rect(self.win, self.GuessBoxColor_Active, box.Rect)
-                elif box.IsHovering(self.Mouse) and not base_board:
-                    if self.Click[0] == 1:
-                        self.ActiveBox = [x, y]
+                if not self.Solving:
+                    if self.ActiveBox == [x, y]:
+                        gm.draw.rect(self.win, self.GuessBoxColor_Active, rect)
+                    elif is_hovering(self.Mouse,rect) and not base_board:
+                        if self.Click[0] == 1:
+                            self.ActiveBox = [x, y]
+                            if mistake:
+                                self.Mistakes[x][y] = 0
+                        else:
+                            gm.draw.rect(self.win, hover_color, rect)
+                    elif mistake:
+                        gm.draw.rect(self.win, (150, 20, 20), rect)
                     else:
-                        gm.draw.rect(self.win, box.HoverColor, box.Rect)
-                elif mistake:
-                    gm.draw.rect(self.win, (150, 20, 20), box.Rect)
+                        gm.draw.rect(self.win, base_color, rect)
                 else:
-                    gm.draw.rect(self.win, box.BaseColor, box.Rect)
+                    gm.draw.rect(self.win, base_color, rect)
 
                 # Draw box values
                 if guess:
                     value = self.Guesses[x][y]
-                    text = self.Font.render(str(value), False, self.GuessTextColor)
+                    text = self.BaseFont.render(str(value), False, self.GuessTextColor)
                     pos[0] += self.GuessTextSize / 2
                     pos[1] += self.GuessTextSize / 4
                     self.win.blit(text, (pos[0], pos[1]))
@@ -349,70 +354,79 @@ class Drawer:
                 else:
                     value = str(self.Board[x][y])
                     if value != "0":
-                        text = self.Font.render(value, False, self.BaseTextColor)
-                        pos[0] += self.TextSize / 2
-                        pos[1] += self.TextSize / 4
+                        text = self.BaseFont.render(value, False, self.BaseTextColor)
+                        pos[0] += self.BaseTextSize / 2
+                        pos[1] += self.BaseTextSize / 4
                         self.win.blit(text, (pos[0], pos[1]))
 
     def get_number_pos(self, coords):
+        """Get position of coordinate"""
         x_pos = (coords[0] * (self.BoxSize + self.PaddingSize)) + self.MarginSize
         y_pos = (coords[1] * (self.BoxSize + self.PaddingSize)) + self.MarginSize
         return [x_pos, y_pos]
 
     def draw_solve_button(self):
+        """Draw solve button in the bottom left"""
         button_color = (50, 150, 25)
         button_color_hover = (80, 200, 25)
         text_color = (200, 200, 200)
 
         button_pos_y = (9 * (self.BoxSize + self.PaddingSize)) + self.MarginSize
-        button = Square([self.MarginSize, button_pos_y, 100, 30], button_color, button_color_hover)
-        if button.IsHovering(self.Mouse):
-            gm.draw.rect(self.win, button.HoverColor, button.Rect)
+        rect = (self.MarginSize, button_pos_y, 100, 30)
+        if is_hovering(self.Mouse, rect):
+            gm.draw.rect(self.win, button_color_hover, rect)
             if self.Click[0] == 1:
                 self.Solving = True
                 self.on_solve_click()
 
         else:
-            gm.draw.rect(self.win, button.BaseColor, button.Rect)
-        solve_text = self.Font.render("Solve", False, text_color)
-        solve_text_pos_x = button.Rect[0] + 25
-        solve_text_pos_y = button.Rect[1] + 3
+            gm.draw.rect(self.win, button_color, rect)
+        solve_text = self.BaseFont.render("Solve", False, text_color)
+        solve_text_pos_x = rect[0] + 25
+        solve_text_pos_y = rect[1] + 3
         self.win.blit(solve_text, (solve_text_pos_x, solve_text_pos_y))
 
     def draw_time(self):
-        x = time.time() - self.start
-        time_elapsed = str(datetime.timedelta(seconds=x))[2:-7]
-        text = self.Font.render(time_elapsed, False, self.BaseTextColor)
+        """Draw time clock on bottom center"""
+        text = self.BaseFont.render(self.get_time_elapsed(), False, self.BaseTextColor)
         x = self.MarginSize + self.PaddingSize + 125
         y = (9 * (self.BoxSize + self.PaddingSize)) + self.MarginSize + 5
         self.win.blit(text, (x, y))
 
+    def get_time_elapsed(self):
+        x = time.time() - self.start
+        time_elapsed = str(datetime.timedelta(seconds=x))[2:-7]
+        return time_elapsed
+
     def draw_check_solution_button(self):
+        """Draw check solution button on the bottom right """
         button_color = (70, 70, 150)
         button_color_hover = (25, 80, 200)
         text_color = (200, 200, 200)
 
         button_pos_x = self.windowSize_x - self.MarginSize - 100
         button_pos_y = (9 * (self.BoxSize + self.PaddingSize)) + self.MarginSize
-        button = Square([button_pos_x, button_pos_y, 100, 30], button_color, button_color_hover)
-        if button.IsHovering(self.Mouse):
-            gm.draw.rect(self.win, button.HoverColor, button.Rect)
+        rect = (button_pos_x, button_pos_y, 100, 30)
+        if is_hovering(self.Mouse, rect):
+            gm.draw.rect(self.win, button_color_hover, rect)
             if self.Click[0] == 1:
                 self.on_check_solution_click()
 
         else:
-            gm.draw.rect(self.win, button.BaseColor, button.Rect)
-        text = self.Font.render("Check", False, text_color)
-        text_pos_x = button.Rect[0] + 25
-        text_pos_y = button.Rect[1] + 3
+            gm.draw.rect(self.win, button_color, rect)
+        text = self.BaseFont.render("Check", False, text_color)
+        text_pos_x = rect[0] + 25
+        text_pos_y = rect[1] + 3
         self.win.blit(text, (text_pos_x, text_pos_y))
 
     def on_solve_click(self):
+        """Use solver to solve the board if it isn't solved"""
         while self.board_solved is False:
             self.Solver.solve_step()
             self.draw_base_board()
 
     def on_check_solution_click(self):
+        """Check user input for errors. If none, game is solved."""
         board_cpy = self.Board
         mistakes = []
 
@@ -436,25 +450,27 @@ class Drawer:
             self.on_user_completes_board_inc(mistakes)
 
     def on_user_complete_board(self):
-        print("user did it!")
+        print("User finished the board!")
 
     def on_user_completes_board_inc(self, mistakes):
+        """Add mistakes to mistake array"""
         for mistake in mistakes:
             self.Mistakes[mistake[0]][mistake[1]] = 1
 
     def add_number(self, index, value):
+        """Add number to board"""
         self.Board[index[0]][index[1]] = value
         gm.display.update()
 
     def remove_number(self, index):
+        """Remove number from board"""
         self.Board[index[0]][index[1]] = 0
 
-    def on_finished(self):
-        print("Game is complete!")
+    def on_solver_complete_board(self):
+        """Set solved to true. Display message"""
+        print("Solver finished the board in ", self.get_time_elapsed())
         self.board_solved = True
 
-    def set_manager(self, manager):
-        self.Manager = manager
 
 
 drawer = Drawer()
