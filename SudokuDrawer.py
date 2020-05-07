@@ -1,4 +1,6 @@
 import pygame as gm
+import time
+import datetime
 
 gm.init()
 gm.font.init()
@@ -214,6 +216,18 @@ class Drawer:
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
     ]
 
+    Mistakes = [
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]
+
     TextSize = 20
     Font = gm.font.SysFont('Arial', TextSize)
 
@@ -248,6 +262,7 @@ class Drawer:
     ActiveBox = [-1, -1]
     event = gm.event.poll()
     LastNumberInput = 0
+    start = time.time()
 
     def __init__(self):
         self.Solver.OnGuessMade += self.add_number
@@ -286,6 +301,7 @@ class Drawer:
 
             gm.display.update()
             self.draw_base_board()
+            self.draw_time()
             self.draw_solve_button()
             self.draw_check_solution_button()
 
@@ -301,8 +317,10 @@ class Drawer:
                 guess = self.Guesses[x][y] != 0
                 user_guess_soft = self.UserSoftGuesses[x][y] != 0
                 base_board = self.Board[x][y] != 0
+                mistake = self.Mistakes[x][y] == 1
 
                 # Draw box background
+
                 if self.ActiveBox == [x, y]:
                     gm.draw.rect(self.win, self.GuessBoxColor_Active, box.Rect)
                 elif box.IsHovering(self.Mouse) and not base_board:
@@ -310,6 +328,8 @@ class Drawer:
                         self.ActiveBox = [x, y]
                     else:
                         gm.draw.rect(self.win, box.HoverColor, box.Rect)
+                elif mistake:
+                    gm.draw.rect(self.win, (150, 20, 20), box.Rect)
                 else:
                     gm.draw.rect(self.win, box.BaseColor, box.Rect)
 
@@ -359,6 +379,14 @@ class Drawer:
         solve_text_pos_y = button.Rect[1] + 3
         self.win.blit(solve_text, (solve_text_pos_x, solve_text_pos_y))
 
+    def draw_time(self):
+        x = time.time() - self.start
+        time_elapsed = str(datetime.timedelta(seconds=x))[2:-7]
+        text = self.Font.render(time_elapsed, False, self.BaseTextColor)
+        x = self.MarginSize + self.PaddingSize + 125
+        y = (9 * (self.BoxSize + self.PaddingSize)) + self.MarginSize + 5
+        self.win.blit(text, (x, y))
+
     def draw_check_solution_button(self):
         button_color = (70, 70, 150)
         button_color_hover = (25, 80, 200)
@@ -385,7 +413,6 @@ class Drawer:
             self.draw_base_board()
 
     def on_check_solution_click(self):
-        print("check solution")
         board_cpy = self.Board
         mistakes = []
 
@@ -412,7 +439,8 @@ class Drawer:
         print("user did it!")
 
     def on_user_completes_board_inc(self, mistakes):
-        print("user fucked up!", mistakes)
+        for mistake in mistakes:
+            self.Mistakes[mistake[0]][mistake[1]] = 1
 
     def add_number(self, index, value):
         self.Board[index[0]][index[1]] = value
