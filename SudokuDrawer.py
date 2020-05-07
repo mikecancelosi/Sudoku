@@ -478,6 +478,7 @@ class Drawer:
             self.on_user_completes_board_inc(mistakes)
 
     def on_user_complete_board(self):
+        self.SolveTime = str(self.get_time_elapsed(self.start))
         self.board_solved_user = True
 
     def on_user_completes_board_inc(self, mistakes):
@@ -500,7 +501,30 @@ class Drawer:
         self.board_solved = True
 
     def draw_user_complete(self):
-        print("draw")
+        window_background_color = (80, 80, 80)
+        size = (300, 300)
+        center = (self.windowSize_x / 2 - (size[0] / 2), (self.windowSize_y / 2) - (size[1] / 2))
+        rect = (center[0], center[1], size[0], size[1])
+        gm.draw.rect(self.win, window_background_color, rect)
+
+        heading_label = "Complete!"
+        heading_color = (40, 200, 100)
+        heading_text_size = 30
+        heading_font = gm.font.SysFont('Arial', heading_text_size)
+        heading_text = heading_font.render(heading_label, False, heading_color)
+        heading_text_pos_x = center[0] + 90
+        heading_text_pos_y = center[1] + 100
+
+        self.win.blit(heading_text, (heading_text_pos_x, heading_text_pos_y))
+
+        subheading_label = "You solved the board in " + self.SolveTime + "!"
+        subheading_color = (80, 160, 100)
+        subheading_text_size = 14
+        subheading_font = gm.font.SysFont('Arial', subheading_text_size)
+        subheading_text = subheading_font.render(subheading_label, False, subheading_color)
+        subheading_text_pos_x = center[0] + 20
+        subheading_text_pos_y = center[1] + 150
+        self.win.blit(subheading_text, (subheading_text_pos_x, subheading_text_pos_y))
 
     def draw_solver_complete(self):
         window_background_color = (80, 80, 80)
@@ -511,15 +535,20 @@ class Drawer:
 
         heading_label = "Complete!"
         heading_color = (40, 200, 100)
-        heading_text = self.BaseFont.render(heading_label, False, heading_color)
-        heading_text_pos_x = center[0] + 50
+        heading_text_size = 30
+        heading_font = gm.font.SysFont('Arial', heading_text_size)
+        heading_text = heading_font.render(heading_label, False, heading_color)
+        heading_text_pos_x = center[0] + 90
         heading_text_pos_y = center[1] + 100
+
         self.win.blit(heading_text, (heading_text_pos_x, heading_text_pos_y))
 
-        subheading_label = "The computer solved the board in " + self.get_time_elapsed(self.SolveStart) + "!"
+        subheading_label = "The computer solved the board in " + self.SolveTime + "!"
         subheading_color = (80, 160, 100)
-        subheading_text = self.BaseFont.render(subheading_label, False, subheading_color)
-        subheading_text_pos_x = center[0] + 30
+        subheading_text_size = 14
+        subheading_font = gm.font.SysFont('Arial', subheading_text_size)
+        subheading_text = subheading_font.render(subheading_label, False, subheading_color)
+        subheading_text_pos_x = center[0] + 20
         subheading_text_pos_y = center[1] + 150
         self.win.blit(subheading_text, (subheading_text_pos_x, subheading_text_pos_y))
 
